@@ -1,0 +1,229 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+library(dada2) 
+library(phyloseq)
+library(DECIPHER) 
+library(phangorn) 
+library(ggplot2) 
+library(gridExtra)
+library(shiny)
+library(miniUI)
+library(caret)
+library(pls)
+library(e1071)
+library(ggplot2)
+library(randomForest)
+library(dplyr)
+library(ggrepel)
+#library(nlme)
+library(devtools)
+library(reshape2)
+library(PMA)
+#library(structSSI)
+library(ade4)
+library(ggnetwork)
+library(intergraph)
+library(scales)
+library(phyloseqGraphTest)
+library(genefilter)
+library(impute)
+library(phyloseq); packageVersion("phyloseq")
+library(Biostrings); packageVersion("Biostrings")
+library(ggplot2); packageVersion("ggplot2")
+theme_set(theme_bw())
+```
+
+
+```{bash}
+#wget pagesperso.univ-brest.fr/~maignien/teaching/M1-MFA/UE-Ecogenomique2/EcoG2_data_cc2.tar.gz
+# x=désarchive z dézip v verbose f file
+#tar xzvf EcoG2_data_cc2.tar.gz
+```
+
+```{bash}
+cp St_Stratif_10sept14/* data
+cp St_Stratif_11mars15/* data
+```
+
+
+```{r}
+septembre <- "/home/rstudio/CC2/St_Stratif_10sept14"
+mars <- "/home/rstudio/CC2/St_Stratif_11mars15"
+path <- "/home/rstudio/CC2/data"
+```
+
+```{r}
+# séparer data en R1 R2
+fnFs <- sort(list.files(path, pattern="_R1.fastq", full.names = TRUE))
+fnRs <- sort(list.files(path, pattern="_R2.fastq", full.names = TRUE))
+sample.names <- sapply(strsplit(basename(fnFs), "_R"), `[`, 1)
+```
+
+# séparer septembre en R1 R2
+fnFs_s <- sort(list.files(septembre, pattern="_R1.fastq", full.names = TRUE))
+fnRs_s <- sort(list.files(septembre, pattern="_R2.fastq", full.names = TRUE))
+sample.names_s <- sapply(strsplit(basename(fnFs_s), "_"), `[`, 1)
+# séparer mars en R1 R2
+fnFs_m <- sort(list.files(mars, pattern="_R1.fastq", full.names = TRUE))
+fnRs_m <- sort(list.files(mars, pattern="_R2.fastq", full.names = TRUE))
+sample.names_m <- sapply(strsplit(basename(fnFs_m), "_"), `[`, 1)
+
+```{r}
+plotQualityProfile(fnFs[1:2])
+```
+
+```{r}
+plotQualityProfile(fnRs[1:2])
+```
+
+```{r}
+# Place filtered files in filtered/ subdirectory
+filtFs <- file.path(path, "filtered", paste0(sample.names, "_F_filt.fastq.gz"))
+filtRs <- file.path(path, "filtered", paste0(sample.names, "_R_filt.fastq.gz"))
+names(filtFs) <- sample.names
+names(filtRs) <- sample.names
+```
+
+```{r}
+#450 pb
+# filtrer amorces font 18 pb
+out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen =c(240,190), maxN=0, maxEE=c(2,2), truncQ=2, rm.phix = TRUE, compress=TRUE, multithread=FALSE)
+head(out)
+```
+```{r}
+errF <- learnErrors(filtFs, multithread=TRUE)
+```
+
+```{r}
+errR <- learnErrors(filtRs, multithread=TRUE)
+```
+```{r}
+plotErrors(errF, nominalQ=TRUE)
+```
+```{r}
+# Sample Inference
+dadaFs <- dada(filtFs, err=errF, multithread=TRUE)
+```
+```{r}
+dadaRs <- dada(filtRs, err=errR, multithread=TRUE)
+```
+```{r}
+dadaFs[[1]]
+```
+```{r}
+#Merged paired reads
+mergers <- mergePairs(dadaFs, filtFs, dadaRs, filtRs, verbose=TRUE)
+# Inspect the merger data.frame from the first sample
+head(mergers[[1]])
+```
+```{r}
+#Construct sequence table
+seqtab <- makeSequenceTable(mergers)
+dim(seqtab)
+# Inspect distribution of sequence lengths
+table(nchar(getSequences(seqtab)))
+```
+
+```{r}
+#Remove chimeras
+seqtab.nochim <- removeBimeraDenovo(seqtab, method="consensus", multithread=TRUE, verbose=TRUE)
+dim(seqtab.nochim)
+```
+```{r}
+sum(seqtab.nochim)/sum(seqtab)
+```
+```{r}
+#Track reads through the pipeline
+getN <- function(x) sum(getUniques(x))
+track <- cbind(out, sapply(dadaFs, getN), sapply(dadaRs, getN), sapply(mergers, getN), rowSums(seqtab.nochim))
+# If processing a single sample, remove the sapply calls: e.g. replace sapply(dadaFs, getN) with getN(dadaFs)
+colnames(track) <- c("input", "filtered", "denoisedF", "denoisedR", "merged", "nonchim")
+rownames(track) <- sample.names
+head(track)
+```
+
+```{bash}
+#données pour taxonomie
+#wget zenodo.org/record/4587955/files/silva_nr99_v138.1_train_set.fa.gz
+```
+
+
+```{r}
+#Assign taxonomy
+taxa <- assignTaxonomy(seqtab.nochim, "~/CC2/silva_nr99_v138.1_train_set.fa.gz", multithread=TRUE)
+```
+
+```{r}
+taxa.print <- taxa # Removing sequence rownames for display only
+rownames(taxa.print) <- NULL
+head(taxa.print)
+```
+```{r}
+# Go phyloseq
+samples.out <- rownames(seqtab.nochim)
+prof <- sapply(strsplit(samples.out, "_"), `[`, 2)
+s_prof <- substr(prof,1,1)
+day <- as.character(sapply(strsplit(samples.out, "_"), `[`, 3))
+samdf <- data.frame(prof=s_prof, Day=day)
+#Divise en mois
+samdf$Mois <- "Septembre"
+samdf$Mois[samdf$Day > "10sept14"] <- "Mars"
+rownames(samdf) <- samples.out
+```
+
+```{r}
+ps <- phyloseq(otu_table(seqtab.nochim, taxa_are_rows=FALSE), 
+               sample_data(samdf), 
+               tax_table(taxa))
+# objet phyloseq, ps@otu_table: table avec les séquences et combien de fois dans l'échantillon, sampledate: table avec échantillons, age, ID.. Tree (arbre phylo avec tous les ARN16S), Tax table: plyla classe genre..
+#vérifier bonne structure bonne valeur
+test<-data.frame(ps@otu_table)
+test2<-ps@sam_data
+test3<-data.frame(ps@tax_table)
+```
+
+```{r}
+dna <- Biostrings::DNAStringSet(taxa_names(ps))
+names(dna) <- taxa_names(ps)
+ps <- merge_phyloseq(ps, dna)
+taxa_names(ps) <- paste0("ASV", seq(ntaxa(ps)))
+ps
+```
+```{r}
+plot_richness(ps, x="Mois", measures=c("Shannon", "Simpson"), color="prof")
+```
+```{r}
+ps.prop <- transform_sample_counts(ps, function(otu) otu/sum(otu))
+ord.nmds.bray <- ordinate(ps, method="NMDS", distance="bray")
+# Stress très proche de 0 car peu d'échantillons
+```
+```{r}
+plot_ordination(ps.prop, ord.nmds.bray, shape="prof", color="Mois", title="Bray NMDS")
+```
+```{r}
+top20 <- names(sort(taxa_sums(ps), decreasing=TRUE))[1:20]
+ps.top20 <- transform_sample_counts(ps, function(OTU) OTU/sum(OTU))
+ps.top20 <- prune_taxa(top20, ps.top20)
+plot_bar(ps.top20, x="Mois", fill="Class") + facet_wrap(~prof, scales="free_x")
+```
+
+```{r}
+top20 <- names(sort(taxa_sums(ps), decreasing=TRUE))[1:20]
+ps.top20 <- transform_sample_counts(ps, function(OTU) OTU/sum(OTU))
+ps.top20 <- prune_taxa(top20, ps.top20)
+plot_bar(ps.top20, x="Mois", fill="Family") + facet_wrap(~prof, scales="free_x")
+```
+
+```{r}
+top20 <- names(sort(taxa_sums(ps), decreasing=TRUE))[1:20]
+ps.top20 <- transform_sample_counts(ps, function(OTU) OTU/sum(OTU))
+ps.top20 <- prune_taxa(top20, ps.top20)
+plot_bar(ps.top20, x="Mois", fill="Genus") + facet_wrap(~prof, scales="free_x")
+```
+# Analyse de la distribution selon la profondeur et selon le moment d'échantillonage
+Abondance: 
+Distribution:
+Remarque: Il manque l'échantillonnage de mars pour le niveau de profondeur médian, ce qui nous empêche d'élaborer des hypothèses plus concrètes quant à l'impact du mois/saison sur la composition des communautés de la profondeur médiane.
