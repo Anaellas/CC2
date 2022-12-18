@@ -1,6 +1,6 @@
 ---
-title: "R Notebook"
-output: html_notebook
+title: "CC2"
+output: github_document
 ---
 ```{r}
 library(dada2) 
@@ -88,9 +88,10 @@ names(filtRs) <- sample.names
 ```
 
 ```{r}
-#450 pb
+# zone amplifiée 450 pb -> 246 + 240 = 486
 # filtrer amorces font 18 pb
-out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen =c(240,190), maxN=0, maxEE=c(2,2), truncQ=2, rm.phix = TRUE, compress=TRUE, multithread=FALSE)
+# 486 - (2x18) = 450 (c'est juste mais avec la qualité des R2 pas le choix)
+out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, trimLeft = c(18, 18), truncLen =c(246,240), maxN=0, maxEE=c(2,2), truncQ=2, rm.phix = TRUE, compress=TRUE, multithread=FALSE)
 head(out)
 ```
 ```{r}
@@ -164,10 +165,10 @@ head(taxa.print)
 ```{r}
 # Go phyloseq
 samples.out <- rownames(seqtab.nochim)
-prof <- sapply(strsplit(samples.out, "_"), `[`, 2)
-s_prof <- substr(prof,1,1)
+profondeur <- sapply(strsplit(samples.out, "_"), `[`, 2)
+s_prof <- substr(profondeur,1,1)
 day <- as.character(sapply(strsplit(samples.out, "_"), `[`, 3))
-samdf <- data.frame(prof=s_prof, Day=day)
+samdf <- data.frame(profondeur=s_prof, Day=day)
 #Divise en mois
 samdf$Mois <- "Septembre"
 samdf$Mois[samdf$Day > "10sept14"] <- "Mars"
@@ -193,37 +194,61 @@ taxa_names(ps) <- paste0("ASV", seq(ntaxa(ps)))
 ps
 ```
 ```{r}
-plot_richness(ps, x="Mois", measures=c("Shannon", "Simpson"), color="prof")
+plot_richness(ps, x="Mois", measures=c("Shannon", "Simpson"), color="profondeur")
 ```
+
+Shannon: Les échantillons du mois de Mars ont des indices de Shannon équivalents. On remarque que pour les échantillons de Septembre en Surface ont un indice de Shannon plus bas, ce qui veut dire que la répartition est plus biaisée, moins uniforme, on a peut-être une grande proportion de cyanobactéries (photosynthétiques à la surface) ? 
+Simpson: La diversité est inférieure en surface pour le mois de septembre et maximale pour l'échantillon de septembre au fond. Pour le mois de Mars, plus de diversité pour les échantillons de Surface.
+
 ```{r}
 ps.prop <- transform_sample_counts(ps, function(otu) otu/sum(otu))
-ord.nmds.bray <- ordinate(ps, method="NMDS", distance="bray")
+ord.nmds.bray <- ordinate(ps, method="NMDS", distance= "bray")
 # Stress très proche de 0 car peu d'échantillons
 ```
 ```{r}
-plot_ordination(ps.prop, ord.nmds.bray, shape="prof", color="Mois", title="Bray NMDS")
+plot_ordination(ps.prop, ord.nmds.bray, shape="profondeur", color="Mois", title="Bray NMDS")
+```
+
+Le NMDS ne foncionne pas, on a trop de superposition. On va réaliser un MDS.
+```{r}
+ph <- prune_samples(rowSums(otu_table(ps)) > 1000, ps)
+phlog <- transform_sample_counts(ph, function(x) log(1 + x))
+out.pcoa.log <- ordinate(phlog,  method = "MDS", distance = "bray")
+evals <- out.pcoa.log$values[,1]
+plot_ordination(phlog, out.pcoa.log, color = "Mois",
+                  shape = "profondeur")
+```
+
+On voit bien une composition différente selon le mois d'échantillonnage. Pour le mois de Mars, la composition ne semble pas trop changeante selon la profondeur. Il y a une nette différence pour le mois de septembre entre la composition au fond (F) des compositions en surface (S) et médian (M).
+
+```{r}
+top20 <- names(sort(taxa_sums(ps), decreasing=TRUE))[1:20]
+ps.top20 <- transform_sample_counts(ps, function(OTU) OTU/sum(OTU))
+ps.top20 <- prune_taxa(top20, ps.top20)
+plot_bar(ps.top20, x="Mois", fill="Class") + facet_wrap(~profondeur, scales="free_x")
 ```
 ```{r}
 top20 <- names(sort(taxa_sums(ps), decreasing=TRUE))[1:20]
 ps.top20 <- transform_sample_counts(ps, function(OTU) OTU/sum(OTU))
 ps.top20 <- prune_taxa(top20, ps.top20)
-plot_bar(ps.top20, x="Mois", fill="Class") + facet_wrap(~prof, scales="free_x")
+plot_bar(ps.top20, x="Mois", fill="Genus") + facet_wrap(~profondeur, scales="free_x")
 ```
 
 ```{r}
 top20 <- names(sort(taxa_sums(ps), decreasing=TRUE))[1:20]
 ps.top20 <- transform_sample_counts(ps, function(OTU) OTU/sum(OTU))
 ps.top20 <- prune_taxa(top20, ps.top20)
-plot_bar(ps.top20, x="Mois", fill="Family") + facet_wrap(~prof, scales="free_x")
+plot_bar(ps.top20, x="Mois", fill="Family") + facet_wrap(~profondeur, scales="free_x")
 ```
 
-```{r}
-top20 <- names(sort(taxa_sums(ps), decreasing=TRUE))[1:20]
-ps.top20 <- transform_sample_counts(ps, function(OTU) OTU/sum(OTU))
-ps.top20 <- prune_taxa(top20, ps.top20)
-plot_bar(ps.top20, x="Mois", fill="Genus") + facet_wrap(~prof, scales="free_x")
-```
-# Analyse de la distribution selon la profondeur et selon le moment d'échantillonage
-Abondance: 
-Distribution:
+Il y a une abondance différentielle selon le moment d'échantillonnage (plus d'abondance en septembre) et selon la profondeur (plus grande abondance pour Septembre au fond). 
+On remarque l'absence de Rhodobacteraceae pour le mois de Mars. 
+On a bien plus de Cyanoblaceae en septembre à la surface et au niveau de profondeur médian, logique puisque les cyanobactéries sont de organismes photosynthétiques. Il y en a pas à la surface pour le mois de Mars, insufficance de lumière ou compétitivité avec une autre famile de bactéries ?
 Remarque: Il manque l'échantillonnage de mars pour le niveau de profondeur médian, ce qui nous empêche d'élaborer des hypothèses plus concrètes quant à l'impact du mois/saison sur la composition des communautés de la profondeur médiane.
+Remarque: Plus de NA pour les échantillonages du mois de Mars, ne permet pas d'apprécier dans sa globalité la composition des échantillonages du mois de Mars. 
+
+
+# Analyse de la distribution selon la profondeur et selon le moment d'échantillonage
+
+Avec tous ces graphiques, on remarque bien une différence sur la composition des communautés bactériennes selon le mois d'échantillonnage et selon la profondeur.
+Des échnatillonnages à un niveau de profondeur médian pour le mois de Mars auraient été appréciés afin de pouvoir comparer avec ceux du mois de septembre et pour également pouvoir regarder l'évolution de la composition de la communauté au fur et à mesure qu'on remonte vers la surface. 
