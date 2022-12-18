@@ -306,8 +306,9 @@ names(filtRs) <- sample.names
 ```
 
 ``` r
-#450 pb -> 240 + 220 (10 chevauche)
+# zone amplifiée 450 pb -> 246 + 240 = 486
 # filtrer amorces font 18 pb
+# 486 - (2x18) = 450 (c'est juste mais avec la qualité des R2 pas le choix)
 out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, trimLeft = c(18, 18), truncLen =c(246,240), maxN=0, maxEE=c(2,2), truncQ=2, rm.phix = TRUE, compress=TRUE, multithread=FALSE)
 head(out)
 ```
@@ -558,15 +559,16 @@ ps
 plot_richness(ps, x="Mois", measures=c("Shannon", "Simpson"), color="profondeur")
 ```
 
-![](CC2_files/figure-gfm/unnamed-chunk-27-1.png)<!-- --> Shannon: Les
-échantillons du mois de Mars ont des indices de Shannon équivalents. On
-remarque que pour les échantillons de Septembre en Surface ont un indice
-de Shannon plus bas, ce qui veut dire que la répartition est plus
-biaisée, moins uniforme, on a peut-être une grande proportion de
-cyanobactéries (photosynthétiques à la surface) ? Simpson: La diversité
-est inférieure en surface pour le mois de septembre et maximale pour
-l’échantillon de septembre au fond. Pour le mois de Mars, plus de
-diversité pour les échantillons de Surface.
+![](CC2_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->
+
+Shannon: Les échantillons du mois de Mars ont des indices de Shannon
+équivalents. On remarque que pour les échantillons de Septembre en
+Surface ont un indice de Shannon plus bas, ce qui veut dire que la
+répartition est plus biaisée, moins uniforme, on a peut-être une grande
+proportion de cyanobactéries (photosynthétiques à la surface) ? Simpson:
+La diversité est inférieure en surface pour le mois de septembre et
+maximale pour l’échantillon de septembre au fond. Pour le mois de Mars,
+plus de diversité pour les échantillons de Surface.
 
 ``` r
 ps.prop <- transform_sample_counts(ps, function(otu) otu/sum(otu))
@@ -576,48 +578,49 @@ ord.nmds.bray <- ordinate(ps, method="NMDS", distance= "bray")
     ## Square root transformation
     ## Wisconsin double standardization
     ## Run 0 stress 9.916161e-05 
-    ## Run 1 stress 9.442545e-05 
+    ## Run 1 stress 9.919702e-05 
+    ## ... Procrustes: rmse 0.00484779  max resid 0.006824748 
+    ## ... Similar to previous best
+    ## Run 2 stress 9.671867e-05 
     ## ... New best solution
-    ## ... Procrustes: rmse 0.1438094  max resid 0.2349081 
-    ## Run 2 stress 0.0006457522 
-    ## Run 3 stress 9.910418e-05 
-    ## ... Procrustes: rmse 0.03815859  max resid 0.1080584 
-    ## Run 4 stress 9.801462e-05 
-    ## ... Procrustes: rmse 0.05689901  max resid 0.09109865 
-    ## Run 5 stress 9.667982e-05 
-    ## ... Procrustes: rmse 0.1640245  max resid 0.2219138 
-    ## Run 6 stress 0.001559107 
-    ## Run 7 stress 0.0004633427 
-    ## ... Procrustes: rmse 0.01254761  max resid 0.02807782 
-    ## Run 8 stress 9.712471e-05 
-    ## ... Procrustes: rmse 0.07495171  max resid 0.118112 
-    ## Run 9 stress 9.792416e-05 
-    ## ... Procrustes: rmse 0.0428178  max resid 0.06901476 
-    ## Run 10 stress 8.827975e-05 
+    ## ... Procrustes: rmse 0.08540788  max resid 0.1358799 
+    ## Run 3 stress 0.0002179153 
+    ## ... Procrustes: rmse 0.07028984  max resid 0.126425 
+    ## Run 4 stress 9.910565e-05 
+    ## ... Procrustes: rmse 0.05371257  max resid 0.08780142 
+    ## Run 5 stress 0.2974023 
+    ## Run 6 stress 0.0009148424 
+    ## Run 7 stress 9.304916e-05 
     ## ... New best solution
-    ## ... Procrustes: rmse 0.1814476  max resid 0.2331546 
-    ## Run 11 stress 0.1372051 
-    ## Run 12 stress 9.712584e-05 
-    ## ... Procrustes: rmse 0.1837109  max resid 0.2955012 
-    ## Run 13 stress 0.001267511 
-    ## Run 14 stress 0.0006859028 
-    ## Run 15 stress 9.723562e-05 
-    ## ... Procrustes: rmse 0.1824231  max resid 0.29303 
-    ## Run 16 stress 9.469998e-05 
-    ## ... Procrustes: rmse 0.1828791  max resid 0.284174 
-    ## Run 17 stress 9.834271e-05 
-    ## ... Procrustes: rmse 0.1248833  max resid 0.1982784 
-    ## Run 18 stress 9.10916e-05 
-    ## ... Procrustes: rmse 0.05460276  max resid 0.07895423 
-    ## Run 19 stress 9.471506e-05 
-    ## ... Procrustes: rmse 0.1818595  max resid 0.2917647 
-    ## Run 20 stress 8.671848e-05 
+    ## ... Procrustes: rmse 0.05909794  max resid 0.08792184 
+    ## Run 8 stress 8.848857e-05 
     ## ... New best solution
-    ## ... Procrustes: rmse 0.06043344  max resid 0.08826776 
+    ## ... Procrustes: rmse 0.03521696  max resid 0.05482932 
+    ## Run 9 stress 9.583597e-05 
+    ## ... Procrustes: rmse 0.02872545  max resid 0.04316001 
+    ## Run 10 stress 9.423235e-05 
+    ## ... Procrustes: rmse 0.01261694  max resid 0.01991142 
+    ## Run 11 stress 0.001560447 
+    ## Run 12 stress 8.55854e-05 
+    ## ... New best solution
+    ## ... Procrustes: rmse 0.06955375  max resid 0.09730696 
+    ## Run 13 stress 9.464417e-05 
+    ## ... Procrustes: rmse 0.1455554  max resid 0.2377533 
+    ## Run 14 stress 9.878292e-05 
+    ## ... Procrustes: rmse 0.1510858  max resid 0.2469415 
+    ## Run 15 stress 0.3122242 
+    ## Run 16 stress 0.0008302408 
+    ## Run 17 stress 0.0006157951 
+    ## Run 18 stress 8.8654e-05 
+    ## ... Procrustes: rmse 0.1534774  max resid 0.2371565 
+    ## Run 19 stress 9.930028e-05 
+    ## ... Procrustes: rmse 0.1533255  max resid 0.2505331 
+    ## Run 20 stress 9.992943e-05 
+    ## ... Procrustes: rmse 0.1322989  max resid 0.2153446 
     ## *** No convergence -- monoMDS stopping criteria:
     ##      5: no. of iterations >= maxit
-    ##     14: stress < smin
-    ##      1: scale factor of the gradient < sfgrmin
+    ##     13: stress < smin
+    ##      2: stress ratio > sratmax
 
     ## Warning in metaMDS(veganifyOTU(physeq), distance, ...): stress is (nearly) zero:
     ## you may have insufficient data
@@ -630,8 +633,10 @@ ord.nmds.bray <- ordinate(ps, method="NMDS", distance= "bray")
 plot_ordination(ps.prop, ord.nmds.bray, shape="profondeur", color="Mois", title="Bray NMDS")
 ```
 
-![](CC2_files/figure-gfm/unnamed-chunk-29-1.png)<!-- --> Le NMDS ne
-foncionne pas, on a trop de superposition. On va réaliser un MDS.
+![](CC2_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->
+
+Le NMDS ne foncionne pas, on a trop de superposition. On va réaliser un
+MDS.
 
 ``` r
 ph <- prune_samples(rowSums(otu_table(ps)) > 1000, ps)
@@ -642,12 +647,13 @@ plot_ordination(phlog, out.pcoa.log, color = "Mois",
                   shape = "profondeur")
 ```
 
-![](CC2_files/figure-gfm/unnamed-chunk-30-1.png)<!-- --> On voit bien
-une composition différente selon le mois d’échantillonnage. Pour le mois
-de Mars, la composition ne semble pas trop changeante selon la
-profondeur. Il y a une nette différence pour le mois de septembre entre
-la composition au fond (F) des compositions en surface (S) et médian
-(M).
+![](CC2_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
+
+On voit bien une composition différente selon le mois d’échantillonnage.
+Pour le mois de Mars, la composition ne semble pas trop changeante selon
+la profondeur. Il y a une nette différence pour le mois de septembre
+entre la composition au fond (F) des compositions en surface (S) et
+médian (M).
 
 ``` r
 top20 <- names(sort(taxa_sums(ps), decreasing=TRUE))[1:20]
@@ -674,15 +680,16 @@ ps.top20 <- prune_taxa(top20, ps.top20)
 plot_bar(ps.top20, x="Mois", fill="Family") + facet_wrap(~profondeur, scales="free_x")
 ```
 
-![](CC2_files/figure-gfm/unnamed-chunk-33-1.png)<!-- --> Il y a une
-abondance différentielle selon le moment d’échantillonnage (plus
-d’abondance en septembre) et selon la profondeur (plus grande abondance
-pour Septembre au fond). On remarque l’absence de Rhodobacteraceae pour
-le mois de Mars. On a bien plus de Cyanoblaceae en septembre à la
-surface et au niveau de profondeur médian, logique puisque les
-cyanobactéries sont de organismes photosynthétiques. Il y en a pas à la
-surface pour le mois de Mars, insufficance de lumière ou compétitivité
-avec une autre famile de bactéries ? Remarque: Il manque
+![](CC2_files/figure-gfm/unnamed-chunk-33-1.png)<!-- -->
+
+Il y a une abondance différentielle selon le moment d’échantillonnage
+(plus d’abondance en septembre) et selon la profondeur (plus grande
+abondance pour Septembre au fond). On remarque l’absence de
+Rhodobacteraceae pour le mois de Mars. On a bien plus de Cyanoblaceae en
+septembre à la surface et au niveau de profondeur médian, logique
+puisque les cyanobactéries sont de organismes photosynthétiques. Il y en
+a pas à la surface pour le mois de Mars, insufficance de lumière ou
+compétitivité avec une autre famile de bactéries ? Remarque: Il manque
 l’échantillonnage de mars pour le niveau de profondeur médian, ce qui
 nous empêche d’élaborer des hypothèses plus concrètes quant à l’impact
 du mois/saison sur la composition des communautés de la profondeur
